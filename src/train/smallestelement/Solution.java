@@ -1,7 +1,6 @@
 package train.smallestelement;
 
 import java.util.*;
-import java.util.stream.*;
 
 public class Solution {
 
