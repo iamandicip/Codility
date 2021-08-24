@@ -31,7 +31,6 @@ public class Test {
     try {
       a.n();
     } catch (IOException e) {
-      // TODO Auto-generated catch block
       e.printStackTrace();
     }
   }
@@ -51,8 +50,6 @@ public class Test {
 
     @Override
     public void setBookMark() {
-      // TODO Auto-generated method stub
-      
     }
     
   }
