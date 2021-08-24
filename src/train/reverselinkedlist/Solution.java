@@ -35,6 +35,8 @@ public class Solution {
   }
 
   public ListNode reverseList2(ListNode head) {
+    ListNode result = head;
+
     ListNode prev = null;
     ListNode current = head;
     ListNode next = null;
@@ -46,23 +48,63 @@ public class Solution {
       current = next;
     }
 
-    head = prev;
+    result = prev;
 
-    return head;
+    return result;
   }
 
-  public ListNode reverseListRecursive(ListNode current, ListNode prev, ListNode next) {
-    if(current != null) {
-      next = current.next;
-      current.next = prev;
-      prev = current;
-      current = next;
+  // public ListNode reverseListRecursive(ListNode current, ListNode prev, ListNode next) {
+  //   if(current != null) {
+  //     next = current.next;
+  //     current.next = prev;
+  //     prev = current;
+  //     current = next;
     
-      return reverseListRecursive(current, prev, next);
+  //     return reverseListRecursive(current, prev, next);
 
-    } else {
-      return prev;
+  //   } else {
+  //     return prev;
+  //   }
+  // }
+
+  public ListNode reverseListRecursive2(ListNode head) {
+    if (head == null || head.next == null) {
+      return head;
     }
+
+    /* reverse the rest list and put
+    the first element at the end */
+    ListNode rest = reverseListRecursive2(head.next);
+    head.next.next = head;
+
+    /* tricky step -- see the diagram */
+    head.next = null;
+
+    /* fix the head pointer */
+    return rest;
+  }
+
+  public ListNode reverseListStack(ListNode head) {
+    Stack<ListNode> s = new Stack<>();
+    ListNode result = head;
+    ListNode n = head;
+
+    while (n.next != null) {
+      s.push(n);
+      n = n.next;
+    }
+
+    result = n;
+
+    while(!s.isEmpty()) {
+      n.next = s.pop();
+      n = n.next;
+    }
+
+    //avoid infinite loop
+    n.next = null;
+
+    return result;
   }
 
   void printList(ListNode node) {
@@ -81,15 +123,32 @@ public class Solution {
 
     System.out.println("Given Linked list: ");
     s.printList(head);
-    head = s.reverseList2(head);
+    ListNode reversed;
+
+    reversed = s.reverseList(head);
     System.out.println("");
-    System.out.println("Reversed linked list: ");
+    System.out.println("Reversed linked list 1: ");
+    s.printList(reversed);
+
+    // reversed = s.reverseListRecursive(head, null, null);
+    // System.out.println("");
+    // System.out.println("Reversed linked list recursive 1: ");
+    // s.printList(reversed);
+
+    head = s.reverseListRecursive2(head);
+    System.out.println("");
+    System.out.println("Reversed linked list recursive 2: ");
     s.printList(head);
 
-    head = s.reverseListRecursive(head, null, null);
+    reversed = s.reverseListStack(head);
     System.out.println("");
-    System.out.println("Twice reversed linked list recurrent (should be equal to given linked list): ");
-    s.printList(head);
+    System.out.println("Reversed linked list stack: ");
+    s.printList(reversed);
+
+    // reversed = s.reverseList2(head);
+    // System.out.println("");
+    // System.out.println("Reversed linked list 2: ");
+    // s.printList(reversed);
   }
 
   public class ListNode {
@@ -106,6 +165,10 @@ public class Solution {
     ListNode(int val, ListNode next) {
       this.val = val;
       this.next = next;
+    }
+
+    public String toString() {
+      return String.valueOf(val);
     }
   }
 }
