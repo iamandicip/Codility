@@ -1,0 +1,274 @@
+package train.bfspath;
+
+import java.util.*;
+import java.util.stream.Collectors;
+import java.io.*;
+import java.math.*;
+
+/**
+ * Auto-generated code below aims at helping you parse
+ * the standard input according to the problem statement.
+ **/
+class Player {
+    
+    static class Node {
+
+        char value;
+        Integer y;
+        Integer x;
+
+        boolean bfsVisited1 = false;
+        boolean bfsVisited2 = false;
+        boolean skipped = false;
+
+        Node parent;
+
+        Set<Node> neighbours = new HashSet<>();
+
+        public Node(int x, int y, char value) {
+            this.x = x;
+            this.y = y;
+            this.value = value;
+        }
+
+        public boolean equals(Object other) {
+            if (this == other){
+                return true;
+            } else if(other == null || !(other instanceof Node)) {
+                return false;
+            } else {
+                Node otherNode = (Node) other;
+                return this.x == otherNode.x && this.y == otherNode.y;
+            }
+        }
+
+        public int hashCode() {
+            return x.hashCode() * y.hashCode();
+        }
+
+        public String toString() {
+            return "[" + x + ", " + y + "](" + value + ")";
+        }
+
+        public int getPriority() {
+            return x + y;
+        }
+    }
+
+    public static void main(String args[]) {
+        Scanner in = new Scanner(System.in);
+        int R = in.nextInt(); // number of rows.
+        int C = in.nextInt(); // number of columns.
+        int A = in.nextInt(); // number of rounds between the time the alarm countdown is activated and the time the alarm goes off.
+
+        Node[][] maze = new Node[C][R];
+        
+        Node tNode = null;
+        Node cNode = null;
+
+        boolean commandReached = false;
+        boolean commandFound = false;
+
+        Stack<Node> visited = new Stack<>();
+        LinkedList<Node> bfsNodes1 = new LinkedList<>();
+        LinkedList<Node> bfsNodes2 = new LinkedList<>();
+
+        // game loop
+        while (true) {
+            int KR = in.nextInt(); // row where Kirk is located.
+            int KC = in.nextInt(); // column where Kirk is located.
+
+            for (int i = 0; i < R; i++) {
+                String ROW = in.next(); // C of the characters in '#.TC?' (i.e. one line of the ASCII maze).
+                
+                char[] x = ROW.toCharArray();
+
+                for (int j = 0; j < C; j++) {
+
+                    // fill in the maze nodes
+                    char cellValue = x[j];
+                    if(maze[j][i] == null) {
+                        maze[j][i] = new Node(j, i, cellValue);;
+                    } else {
+                        maze[j][i].value = cellValue;
+                    }
+
+                    // remember the start and end nodes
+                    Node n = maze[j][i];
+                    if(cellValue == 'C' && cNode == null){
+                        cNode = n;
+                    } else if(cellValue == 'T' && tNode == null) {
+                        tNode = n;
+                    }
+
+                    // update neighbours
+                    if(nodeIsValid(n)) {
+                        if(i > 0) {
+                            Node upNode = maze[j][i-1];
+                            if(nodeIsValid(upNode)) {
+                                n.neighbours.add(upNode);
+                                upNode.neighbours.add(n);
+                            } 
+                        }
+
+                        if(j > 0) {
+                            Node leftNode = maze[j-1][i];
+                            if(nodeIsValid(leftNode)) {
+                                n.neighbours.add(leftNode);
+                                leftNode.neighbours.add(n);
+                            }
+                        }
+                    }
+
+                    if(i == KR && j == KC) {
+                        System.err.print("X");
+                    } else {
+                        System.err.print(cellValue);
+                    }
+                }
+                System.err.println("");
+            }
+
+            Node currentNode = maze[KC][KR];
+            Node nextNode = null;
+            String direction = null;
+
+            if(currentNode.equals(cNode)){
+                System.err.println("Command reached!");
+                bfsNodes2.push(tNode);
+                commandReached = true;
+            }
+
+            if(cNode != null && !commandFound) {
+                System.err.println("Command found!");
+                bfsNodes1.push(cNode);
+                commandFound = true;
+            }
+
+            // maze discovery mode            
+            if(!commandReached) {
+                if(commandFound) {
+                    // if we found the cNode, calculate the shortest path to it
+                    while(!bfsNodes1.isEmpty()) {
+                        Node curNode = bfsNodes1.pop();
+                        curNode.bfsVisited1 = true;
+
+                        if(curNode.equals(currentNode)) {
+                            bfsNodes1.clear();
+                            break;
+                        }
+
+                        curNode.neighbours
+                            .stream()
+                            .filter(n -> !n.bfsVisited1 && !n.skipped)
+                            .forEach(node -> {
+                                node.bfsVisited1 = true;
+                                node.parent = curNode;
+                                bfsNodes1.push(node);
+                            });
+                    }
+
+                    // navigate to cNode via parent
+                    nextNode = currentNode.parent;
+                } 
+                
+                if (nextNode == null) {
+                    // continue searching
+                    List<Node> notVisitedNeighbours = currentNode.neighbours
+                        .stream()
+                        .filter(n -> !visited.contains(n) && !n.skipped)
+                        .collect(Collectors.toList());
+
+                    if(notVisitedNeighbours.isEmpty()) {
+                        // mark this node as dead
+                        System.err.println("No more neighbours! Dead node!");
+                        currentNode.skipped = true;
+
+                        // go back
+                        nextNode = visited.pop();
+
+                    } else {
+                        System.err.println("Saving node");
+                        visited.push(currentNode);
+                        
+                        int directionPriority = 0;
+                        int minDistance = Integer.MAX_VALUE;
+                        for(Node n : notVisitedNeighbours) {
+                            if(n.value == 'C') {
+                                // if we are next to the cNode, go there
+                                nextNode = n;
+                                break;
+                            } else if(commandFound) {
+                                int distance = getDistanceBetweenNodes(n, cNode);
+                                if(distance < minDistance) {
+                                    distance = minDistance;
+                                    nextNode = n;
+                                }
+                            } else {
+                                // find the neighbour to the right and down
+                                int priority = n.getPriority();
+                                if(priority > directionPriority) {
+                                    directionPriority = priority;
+                                    nextNode = n;
+                                }
+                            }
+                        }
+                    }
+                }
+
+            } else {
+
+                // calculate the path back to the tNode
+                while(!bfsNodes2.isEmpty()) {
+                    Node curNode  = bfsNodes2.pop();
+                    curNode.bfsVisited2 = true;
+
+                    if(curNode.equals(cNode)) {
+                        bfsNodes2.clear();
+                        break;
+                    }
+
+                    curNode.neighbours
+                        .stream()
+                        .filter(node -> !node.bfsVisited2 && !node.skipped)
+                        .forEach(node -> {
+                            node.bfsVisited2 = true;
+                            node.parent = curNode;
+                            bfsNodes2.add(node);
+                        });
+                }
+
+                // navigate to tNode via parent
+                nextNode = currentNode.parent;
+            }
+
+            direction = getDirectionFromNodes(currentNode, nextNode);
+            System.err.println(currentNode + " + " + direction + " -> " + nextNode);
+            System.out.println(direction); // Kirk's next move (UP DOWN LEFT or RIGHT).
+        }
+    }
+
+    public static String getDirectionFromNodes(Node node1, Node node2) {
+        String direction = null;
+        if(node1.x > node2.x) {
+            direction = "LEFT";
+        } else if (node1.x < node2.x) {
+            direction = "RIGHT";
+        } else if (node1.y > node2.y) {
+            direction = "UP";
+        } else if (node1.y < node2.y) {
+            direction = "DOWN";
+        }
+        
+        return direction;
+    }
+
+    public static int getDistanceBetweenNodes(Node n1, Node n2) {
+        return Math.abs(n1.x - n2.x) + Math.abs(n1.y - n2.y);
+    }
+
+    public static boolean nodeIsValid(Node node) {
+        char value = node.value;
+        return value == '.' || value == 'C' || value == 'T';
+    }
+}
